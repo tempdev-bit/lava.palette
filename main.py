@@ -1,18 +1,35 @@
 import os
 import json
 import numpy as np
-from tkinterdnd2 import TkinterDnD, DND_FILES
-from tkinter import messagebox, filedialog
-from PIL import Image, ImageTk, ImageDraw
+from PIL import Image, ImageDraw
 from sklearn.cluster import KMeans
-import customtkinter as ctk
 
-# --------------------- Config ---------------------- #
+import flet as ft
+from flet import (
+    FilePicker,
+    FilePickerResultEvent,
+    Column,
+    Row,
+    Container,
+    Image as FtImage,
+    Text,
+    ElevatedButton,
+    Slider,
+    Switch,
+    IconButton,
+    ProgressBar,
+    TextField,
+    Colors,
+    Icons as icons,
+)
+
+# ---------------- Config ---------------- #
 HISTORY_FILE = "palette_history.json"
 EXPORT_SIZES = [1, 8, 32]
-DEFAULT_NUM_COLORS = 12
+DEFAULT_NUM_COLORS = 16
+PREVIEW_SIZE = 200
 
-# ------------------ Color Utils -------------------- #
+# ---------------- Utils ---------------- #
 def rgb_to_hex(rgb):
     return '#%02x%02x%02x' % tuple(rgb)
 
@@ -48,163 +65,133 @@ def save_history(entry):
     with open(HISTORY_FILE, "w") as f:
         json.dump(existing, f, indent=2)
 
-# ------------------ Main App Class ------------------ #
-class PaletteApp:
-    def __init__(self, root):
-        self.root = root
-        self.root.title("lava.pallete 🐉")
-        self.root.geometry("900x600")
-        self.root.resizable(False, False)
+# ---------------- Main App ---------------- #
+def main(page: ft.Page):
+    page.title = "lava.palette 🐉"
+    page.theme_mode = ft.ThemeMode.DARK
+    page.horizontal_alignment = ft.MainAxisAlignment.CENTER
+    page.scroll = ft.ScrollMode.AUTO
+    page.padding = 20
+    page.window_width = 1024
+    page.window_height = 720
 
-        self.image = None
-        self.num_colors = DEFAULT_NUM_COLORS
+    image = None
+    image_path = None
+    colors = []
 
-        self.build_ui()
-
-    def build_ui(self):
-        main_frame = ctk.CTkFrame(self.root)
-        main_frame.pack(fill="both", expand=True, padx=10, pady=10)
-
-        # Left Panel
-        left = ctk.CTkFrame(main_frame, width=280)
-        left.pack(side="left", fill="y", padx=10, pady=10)
-
-        # Frame to simulate border
-        self.image_frame = ctk.CTkFrame(left, width=254, height=254, corner_radius=12, fg_color="#444444")
-        self.image_frame.pack(pady=10)
-        self.image_frame.pack_propagate(False)  # fix size
-        
-        # Label inside frame
-        self.image_label = ctk.CTkLabel(
-            self.image_frame, text="Drop Image Here", width=250, height=250,
-            corner_radius=10, fg_color="transparent", anchor="center"
+    preview_img = FtImage(width=PREVIEW_SIZE, height=PREVIEW_SIZE, visible=False)
+    palette_grid = ft.GridView(
+            expand=True,
+            runs_count=0,          # auto wrap
+            max_extent=200,        # max tile width
+            child_aspect_ratio=1.5, # width/height ratio of color tiles
+            spacing=10,
+            run_spacing=10,
         )
-        self.image_label.pack(expand=True, fill="both")
-        
-        # Drag and drop binding on label
-        self.image_label.drop_target_register(DND_FILES)
-        self.image_label.dnd_bind("<<Drop>>", self.on_drop)
-        
-        self.image_label.drop_target_register(DND_FILES)
-        self.image_label.dnd_bind("<<Drop>>", self.on_drop)
 
-        self.select_btn = ctk.CTkButton(left, text="Select Image", command=self.select_image)
-        self.select_btn.pack(pady=(10, 5))
+    def load_image(path):
+        nonlocal image, image_path, colors
+        image_path = path
+        image = Image.open(path).convert("RGB")
+        preview = image.copy()
+        preview.thumbnail((PREVIEW_SIZE, PREVIEW_SIZE))
+        thumb_path = "_preview.png"
+        preview.save(thumb_path)
+        preview_img.src = thumb_path
+        preview_img.visible = True
+        generate_palette(None)
+        export_btn.disabled = False
+        page.update()
 
-        ctk.CTkLabel(left, text="Number of Colors:").pack(pady=(20, 5))
-
-        slider_frame = ctk.CTkFrame(left, fg_color="transparent")
-        slider_frame.pack(padx=10, fill="x")
-
-        self.color_count = ctk.IntVar(value=self.num_colors)
-
-        self.slider = ctk.CTkSlider(
-            slider_frame, from_=3, to=24, number_of_steps=21,
-            variable=self.color_count, command=lambda e: self.update_color_count()
-        )
-        self.slider.pack(side="left", fill="x", expand=True)
-
-        self.color_label = ctk.CTkLabel(slider_frame, text=str(self.num_colors), width=40)
-        self.color_label.pack(side="right", padx=(10, 0))
-
-        self.export_btn = ctk.CTkButton(
-            left, text="Export Palette", command=self.export_files, state="disabled"
-        )
-        self.export_btn.pack(pady=20)
-
-        # Right Panel (Palette)
-        self.palette_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
-        self.palette_frame.pack(side="left", fill="both", expand=True, padx=10, pady=10)
-
-    def update_color_count(self):
-        self.color_label.configure(text=str(self.color_count.get()))
-        self.generate_palette()
-
-    def on_drop(self, event):
-        path = event.data.strip().replace('{', '').replace('}', '')
-        if os.path.isfile(path) and path.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
-            self.load_image(path)
-        else:
-            messagebox.showwarning("Invalid File", "Please drop a valid image file.")
-
-    def select_image(self):
-        filetypes = [("Image Files", "*.png *.jpg *.jpeg *.webp")]
-        path = filedialog.askopenfilename(filetypes=filetypes)
-        if path:
-            self.load_image(path)
-
-    def load_image(self, path):
-        try:
-            self.image = Image.open(path).convert("RGB")
-            self.image_path = path
-            self.display_image(self.image)
-            self.generate_palette()
-            self.export_btn.configure(state="normal")
-        except Exception as e:
-            messagebox.showerror("Error", str(e))
-
-    def display_image(self, img):
-        preview = img.copy()
-        preview.thumbnail((250, 250))
-        self.tk_img = ImageTk.PhotoImage(preview)
-        self.image_label.configure(image=self.tk_img, text="", fg_color="transparent")
-
-    def generate_palette(self):
-        if not self.image:
+    def generate_palette(e):
+        nonlocal colors
+        if image is None:
             return
-
-        for widget in self.palette_frame.winfo_children():
-            widget.destroy()
-
-        self.num_colors = self.color_count.get()
-        self.colors = extract_colors(self.image, self.num_colors)
-
-        columns = 4
-        for i, color in enumerate(self.colors):
+        num = int(slider.value)
+        colors = extract_colors(image, num)
+        palette_grid.controls.clear()
+        for color in colors:
             hex_color = rgb_to_hex(color)
-            tile = ctk.CTkLabel(
-                self.palette_frame,
-                text=hex_color,
+            tile = Container(
+                content=Text(hex_color, color="white" if sum(color) < 400 else "black"),
+                bgcolor=hex_color,
                 width=180,
-                height=40,
-                corner_radius=6,
-                fg_color=hex_color,
-                text_color="white" if sum(color) < 400 else "black"
+                height=48,
+                border_radius=10,
+                alignment=ft.alignment.center
             )
-            tile.grid(row=i // columns, column=i % columns, padx=8, pady=8, sticky="nsew")
+            palette_grid.controls.append(tile)
+        page.update()
 
-        for i in range(columns):
-            self.palette_frame.grid_columnconfigure(i, weight=1)
+    def select_file_result(e: FilePickerResultEvent):
+        if e.files:
+            load_image(e.files[0].path)
 
-    def export_files(self):
-        base = os.path.splitext(os.path.basename(self.image_path))[0]
-        folder = filedialog.askdirectory(title="Select Folder to Export")
+    def export_palette(e):
+        if not image_path:
+            return
+        folder = os.path.join(os.path.expanduser("~"), "Downloads")
         if not folder:
             return
-
-        export_gpl(self.colors, os.path.join(folder, f"{base}.gpl"))
+        base = os.path.splitext(os.path.basename(image_path))[0]
+        export_gpl(colors, os.path.join(folder, f"{base}.gpl"))
         for scale in EXPORT_SIZES:
-            export_png(self.colors, os.path.join(folder, f"{base}_x{scale}.png"), scale)
-
+            export_png(colors, os.path.join(folder, f"{base}_x{scale}.png"), scale)
         save_history({
-            "file": self.image_path,
-            "colors": [rgb_to_hex(c) for c in self.colors]
+            "file": image_path,
+            "colors": [rgb_to_hex(c) for c in colors]
         })
-        messagebox.showinfo("Success", "Palette exported!")
+        page.snack_bar = ft.SnackBar(ft.Text("✅ Palette exported!"))
+        page.snack_bar.open = True
+        page.update()
 
-# ---------------------- Entry Point ---------------------- #
+    def toggle_theme(e):
+        page.theme_mode = ft.ThemeMode.DARK if theme_switch.value else ft.ThemeMode.LIGHT
+        page.update()
+
+    file_picker = FilePicker(on_result=select_file_result)
+    folder_picker = FilePicker()
+    page.overlay.extend([file_picker, folder_picker])
+
+    slider = Slider(
+        min=2,
+        max=24,
+        divisions=20,
+        label="{value}",
+        value=DEFAULT_NUM_COLORS,
+        on_change=generate_palette
+    )
+
+    theme_switch = Switch(label="Dark Mode", value=True, on_change=toggle_theme)
+
+    export_btn = ElevatedButton("⬇ Export Palette", on_click=export_palette, disabled=True)
+
+    browse_button = ElevatedButton(
+        text="Browse Image",
+        icon=icons.IMAGE,
+        on_click=lambda _: file_picker.pick_files(allow_multiple=False)
+    )
+
+    page.add(
+        Row([
+            Column([
+                Text("lava.palette 🐉", size=28, weight=ft.FontWeight.BOLD),
+                browse_button,
+                preview_img,
+                Text("Number of Colors:"),
+                slider,
+                export_btn,
+                theme_switch
+            ], width=350, spacing=20),
+            Container(
+                content=palette_grid,
+                expand=True,
+                padding=10,
+                border_radius=12,
+                bgcolor="#2b2b2b"  # dark gray background
+            )
+        ], expand=True)
+    )
+
 if __name__ == "__main__":
-    root = TkinterDnD.Tk()
-
-    # Setup CustomTkinter theme
-    ctk.set_appearance_mode("dark")
-    ctk.set_default_color_theme("dark-blue")
-
-    try:
-        root.tk.eval('package require tkdnd')
-    except Exception as e:
-        print("tkdnd load error:", e)
-        messagebox.showerror("Drag & Drop Error", "Could not load tkdnd extension.\nDrag-and-drop may not work.")
-
-    app = PaletteApp(root)
-    root.mainloop()
+    ft.app(target=main)
