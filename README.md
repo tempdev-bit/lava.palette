@@ -111,7 +111,7 @@ pip install -r req.txt
 
 ### 📸 Screenshots
 
-    ![lava.palette + miku](image.png)
+![lava.palette + miku](image.png)
 
 🔒 License
 
