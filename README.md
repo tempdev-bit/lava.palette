@@ -1,13 +1,13 @@
 # lava.palette 🐉
 
-**lava.palette** is a modern, cross-platform color palette generator built with [Flet](https://flet.dev/).  
+**lava.palette** is a simple, modern color palette generator (Created in 3hrs) built with [Flet](https://flet.dev/).  
 Upload any image, extract a palette of dominant colors using KMeans clustering, preview the palette, and export it in `.gpl` and `.png` formats at multiple resolutions. All with a clean, responsive UI.
 
 ---
 
 ## 🎨 Features
 
-- 🖼 Upload any image and preview it live
+- 🖼 Upload any image (.jpg, .jpeg, .png) and preview it live
 - 🎯 Extract dominant colors using **KMeans clustering**
 - 🎚 Adjustable color count (2 to 24)
 - 🌗 Dark/Light mode toggle
@@ -29,8 +29,6 @@ Dependencies (listed in `req.txt`):
 - pillow
 - numpy
 - scikit-learn
-
-
 ---
 
 ## 🚀 Getting Started
@@ -42,6 +40,7 @@ Use the included `setup.py` to auto-create a virtual environment, install depend
 ```bash
 python setup.py
 ```
+---
 
 ### ⚙️ Option 2: Manual Setup
 
@@ -50,9 +49,6 @@ python setup.py
 python -m venv venv
 
 # 2. Activate the environment
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
 source venv/bin/activate
 
 # 3. Install required packages
@@ -78,6 +74,8 @@ Use "⬇ Export Palette" to save:
 
 All exported files are saved to your system's Downloads folder.
 
+---
+
 ### 📤 Exported Files
 
 Exported palettes are saved as:
@@ -92,6 +90,8 @@ Exported palettes are saved as:
 
 Export folder: ~/Downloads (user's default Downloads directory)
 
+---
+
 ### 📚 Dependencies
 
 req.txt
@@ -105,15 +105,19 @@ Install with:
 
 pip install -r req.txt
 
+---
+
 ### 🧪 Tested On
 
     ✅ Linux mint 22.1
+
+---
 
 ### 📸 Screenshots
 
 ![lava.palette + miku](image.png)
 
-🔒 License
+### 🔒 License
 
 This project is licensed under the MIT License.
 
