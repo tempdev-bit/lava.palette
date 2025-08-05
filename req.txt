@@ -1,0 +1,5 @@
+numpy
+Pillow
+scikit-learn
+tkinterdnd2
+customtkinter
