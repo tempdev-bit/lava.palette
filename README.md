@@ -1,6 +1,6 @@
 # lava.palette 🐉
 
-**lava.palette** is a simple, modern color palette generator (Created in 3hrs) built with [Flet](https://flet.dev/).  
+**lava.palette** is a simple, modern color palette generator (created in 3hrs as a fun side project) built with [Flet](https://flet.dev/).  
 Upload any image, extract a palette of dominant colors using KMeans clustering, preview the palette, and export it in `.gpl` and `.png` formats at multiple resolutions. All with a clean, responsive UI.
 
 ---
@@ -15,7 +15,7 @@ Upload any image, extract a palette of dominant colors using KMeans clustering, 
   - GIMP `.gpl` palette file
   - PNG strips at multiple resolutions (`x1`, `x8`, `x32`)
 - 🕒 Automatically saves palette history to `palette_history.json`
-- 🖥 Works offline with a beautiful native UI
+- 🖥 Works offline with a beautiful native UI made using flet.
 
 ---
 
