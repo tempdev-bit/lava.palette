@@ -23,22 +23,28 @@ from flet import (
     Icons as icons,
 )
 
+
 # ---------------- Config ---------------- #
 HISTORY_FILE = "palette_history.json"
 EXPORT_SIZES = [1, 8, 32]
 DEFAULT_NUM_COLORS = 16
 PREVIEW_SIZE = 200
 
+
 # ---------------- Utils ---------------- #
 def rgb_to_hex(rgb):
     return '#%02x%02x%02x' % tuple(rgb)
 
+
 def extract_colors(image, num_colors):
     img = image.resize((200, 200))
+
     data = np.array(img).reshape(-1, 3)
+
     kmeans = KMeans(n_clusters=num_colors, n_init='auto')
     kmeans.fit(data)
     return [tuple(map(int, c)) for c in kmeans.cluster_centers_]
+
 
 def export_gpl(colors, filename):
     with open(filename, 'w') as f:
@@ -46,14 +52,18 @@ def export_gpl(colors, filename):
         for c in colors:
             f.write(f"{c[0]} {c[1]} {c[2]}\t{rgb_to_hex(c)}\n")
 
+
 def export_png(colors, filename, scale):
     width = len(colors) * scale
     height = scale
+
     img = Image.new("RGB", (width, height))
+
     draw = ImageDraw.Draw(img)
     for i, color in enumerate(colors):
         draw.rectangle([i*scale, 0, (i+1)*scale, height], fill=color)
     img.save(filename)
+
 
 def save_history(entry):
     try:
@@ -64,6 +74,7 @@ def save_history(entry):
     existing.append(entry)
     with open(HISTORY_FILE, "w") as f:
         json.dump(existing, f, indent=2)
+
 
 # ---------------- Main App ---------------- #
 def main(page: ft.Page):
@@ -91,25 +102,32 @@ def main(page: ft.Page):
 
     def load_image(path):
         nonlocal image, image_path, colors
+
         image_path = path
         image = Image.open(path).convert("RGB")
+        
         preview = image.copy()
         preview.thumbnail((PREVIEW_SIZE, PREVIEW_SIZE))
         thumb_path = "_preview.png"
         preview.save(thumb_path)
+
         preview_img.src = thumb_path
         preview_img.visible = True
+
         generate_palette(None)
         export_btn.disabled = False
+
         page.update()
 
     def generate_palette(e):
         nonlocal colors
+
         if image is None:
             return
         num = int(slider.value)
         colors = extract_colors(image, num)
         palette_grid.controls.clear()
+
         for color in colors:
             hex_color = rgb_to_hex(color)
             tile = Container(
@@ -121,6 +139,7 @@ def main(page: ft.Page):
                 alignment=ft.alignment.center
             )
             palette_grid.controls.append(tile)
+
         page.update()
 
     def select_file_result(e: FilePickerResultEvent):
@@ -192,6 +211,7 @@ def main(page: ft.Page):
             )
         ], expand=True)
     )
+
 
 if __name__ == "__main__":
     ft.app(target=main)
